@@ -1,0 +1,45 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>MLP ONNX Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 24px; }
+    .card { max-width: 720px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; }
+    h1 { margin-top: 0; font-size: 22px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    label { font-size: 14px; color: #333; }
+    input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
+    button { padding: 10px 16px; border: 0; border-radius: 8px; background: #0a7; color: white; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: default; }
+    .row { display: flex; gap: 10px; align-items: center; margin-top: 16px; }
+    .result { margin-top: 16px; font-size: 18px; }
+    .muted { color: #666; font-size: 13px; }
+    .error { color: #b00; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>ONNX MLP Inference</h1>
+    <p class="muted">Fill inputs, then click Predict. The model is your exported <code>diabetes_risk_model.onnx</code>.</p>
+
+    <form id="form">
+      <div id="inputs" class="grid"></div>
+      <div class="row">
+        <button id="predictBtn" type="submit">Predict</button>
+        <span id="status" class="muted">Model: loading…</span>
+      </div>
+    </form>
+
+    <div id="result" class="result"></div>
+    <div id="error" class="error"></div>
+  </div>
+
+  <!-- onnxruntime-web (CPU) -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+  <!-- your app -->
+  <script src="index.js"></script>
+</body>
+</html>
