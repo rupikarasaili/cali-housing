@@ -1,36 +1,93 @@
-
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>MLP ONNX Demo</title>
+  <title>California Housing — ONNX MLP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: system-ui, Arial, sans-serif; margin: 24px; }
-    .card { max-width: 720px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 12px; }
-    h1 { margin-top: 0; font-size: 22px; }
-    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    label { font-size: 14px; color: #333; }
-    input[type="number"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 8px; }
-    button { padding: 10px 16px; border: 0; border-radius: 8px; background: #0a7; color: white; cursor: pointer; }
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --muted: #9ca3af;
+      --text: #e5e7eb;
+      --accent: #22c55e;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px;
+      background: var(--bg); color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
+    }
+    .card {
+      max-width: 900px; margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 22px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    p.muted { margin: 0 0 18px; color: var(--muted); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input[type="number"], input[type="text"], textarea {
+      width: 100%; padding: 10px 12px; font-size: 14px;
+      color: var(--text);
+      background: #0b1220; border: 1px solid var(--border);
+      border-radius: 10px; outline: none;
+    }
+    input[type="number"]:focus, input[type="text"]:focus, textarea:focus {
+      border-color: #2dd4bf; box-shadow: 0 0 0 3px rgba(45,212,191,.15);
+    }
+    /* allow typing instead of spinner buttons */
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
+    .row { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+    button {
+      padding: 10px 16px; border: 0; border-radius: 10px;
+      background: var(--accent); color: #04110b; cursor: pointer; font-weight: 600;
+    }
+    button.ghost {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
     button:disabled { opacity: 0.6; cursor: default; }
-    .row { display: flex; gap: 10px; align-items: center; margin-top: 16px; }
     .result { margin-top: 16px; font-size: 18px; }
-    .muted { color: #666; font-size: 13px; }
-    .error { color: #b00; }
+    .error { color: #fca5a5; margin-top: 8px; }
+    details { margin-top: 14px; }
+    summary { cursor: pointer; color: var(--muted); }
+    textarea { width: 100%; min-height: 80px; resize: vertical; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>ONNX MLP Inference</h1>
-    <p class="muted">Fill inputs, then click Predict. The model is your exported <code>california_housing_model.onnx</code>.</p>
+    <h1>California Housing — ONNX MLP</h1>
+    <p class="muted">Enter features and click <b>Predict</b>. Model: <code>california_housing_model.onnx</code></p>
 
     <form id="form">
       <div id="inputs" class="grid"></div>
+
       <div class="row">
         <button id="predictBtn" type="submit">Predict</button>
+        <button id="loadDefault" type="button" class="ghost">Load sample row</button>
+        <button id="resetBtn" type="button" class="ghost">Reset</button>
         <span id="status" class="muted">Model: loading…</span>
       </div>
+
+      <details>
+        <summary>Paste a CSV row (8 numbers)</summary>
+        <textarea id="csv" placeholder="v1, v2, …, v8"></textarea>
+        <button id="loadCsv" type="button" class="ghost">Load row</button>
+      </details>
     </form>
 
     <div id="result" class="result"></div>
@@ -38,8 +95,60 @@
   </div>
 
   <!-- onnxruntime-web (CPU) -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-  <!-- your app -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
   <script src="index.js"></script>
+  <script>
+    // optional UI helpers; works with your existing index.js
+
+    // Hook into existing buildInputs to ensure typing works everywhere
+    // If your index.js already defines buildInputs(), this augments inputs it created.
+    document.addEventListener('DOMContentLoaded', () => {
+      const addComfortAttrs = () => {
+        const inputs = document.querySelectorAll('#inputs input');
+        inputs.forEach((el) => {
+          el.type = 'number';
+          el.step = 'any';               // allow decimals
+          el.inputMode = 'decimal';      // mobile decimal keypad
+          el.placeholder ||= '0';
+        });
+      };
+      // after index.js builds inputs:
+      const observer = new MutationObserver(addComfortAttrs);
+      observer.observe(document.getElementById('inputs'), { childList: true });
+      addComfortAttrs();
+
+      // sample row loader & reset
+      const DEFAULT_ROW = [2.9063, 27, 3.79927007, 1.11678832, 2009, 3.66605839, 33.88, -118.29];
+      document.getElementById('loadDefault').addEventListener('click', () => {
+        const names = window.FEATURE_NAMES || [];
+        names.forEach((name, i) => {
+          const el = document.getElementById(`f_${name}`);
+          if (el) el.value = DEFAULT_ROW[i] ?? '';
+        });
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        document.getElementById('form').reset();
+        document.getElementById('result').textContent = '';
+        document.getElementById('error').textContent = '';
+      });
+
+      document.getElementById('loadCsv').addEventListener('click', () => {
+        const raw = document.getElementById('csv').value.trim();
+        if (!raw) return;
+        const vals = raw.split(/[\s,]+/).map(Number).filter(v => !Number.isNaN(v));
+        const names = window.FEATURE_NAMES || [];
+        if (vals.length !== names.length) {
+          document.getElementById('error').textContent = `Expected ${names.length} numbers, got ${vals.length}.`;
+          return;
+        }
+        names.forEach((name, i) => {
+          const el = document.getElementById(`f_${name}`);
+          if (el) el.value = vals[i];
+        });
+        document.getElementById('error').textContent = '';
+      });
+    });
+  </script>
 </body>
 </html>
