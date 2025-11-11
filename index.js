@@ -54,6 +54,19 @@ function buildInputs() {
     inputsDiv.appendChild(wrap);
   });
 }
+function loadDefaultRowIntoInputs() {
+  const names = window.FEATURE_NAMES || [];
+  const row   = window.DEFAULT_ROW  || [];
+  for (let i = 0; i < names.length; i++) {
+    const el = document.getElementById(`f_${names[i]}`);
+    if (el) el.value = row[i] ?? '';
+  }
+}
+
+// after your existing buildInputs();
+buildInputs();
+loadDefaultRowIntoInputs();
+
 
 function getFeatureVector() {
   const x = new Float32Array(FEATURE_NAMES.length);
