@@ -1,4 +1,4 @@
-const MODEL_URL = 'cali_housing_model.onnx';
+const MODEL_URL = 'california_housing_model.onnx';
 const PREDICTION_LABEL = 'Predicted value';
 
 const FEATURE_NAMES = [
